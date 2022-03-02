@@ -79,7 +79,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
       init(&modem, mux);
     }
 
-    bool init(TinyGsmSim800* modem, uint8_t mux = 0) const {
+    bool init(TinyGsmSim800* modem, uint8_t mux = 0) {
       this->at       = modem;
       sock_available = 0;
       prev_check     = 0;
@@ -97,7 +97,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     }
 
    public:
-    virtual int connect(const char* host, uint16_t port, int timeout_s) const {
+    virtual int connect(const char* host, uint16_t port, int timeout_s) {
       stop();
       TINY_GSM_YIELD();
       rx.clear();
@@ -106,7 +106,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     }
     TINY_GSM_CLIENT_CONNECT_OVERRIDES
 
-    void stop(uint32_t maxWaitMs) const {
+    void stop(uint32_t maxWaitMs) {
       dumpModemBuffer(maxWaitMs);
       at->sendAT(GF("+CIPCLOSE="), mux, GF(",1"));  // Quick close
       sock_connected = false;

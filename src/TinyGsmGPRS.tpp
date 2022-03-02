@@ -27,22 +27,22 @@ class TinyGsmGPRS {
    * SIM card functions
    */
   // Unlocks the SIM
-  bool simUnlock(const char* pin) {
+  bool simUnlock(const char* pin) const {
     return thisModem().simUnlockImpl(pin);
   }
   // Gets the CCID of a sim card via AT+CCID
-  String getSimCCID() {
+  String getSimCCID() const {
     return thisModem().getSimCCIDImpl();
   }
   // Asks for TA Serial Number Identification (IMEI)
-  String getIMEI() {
+  String getIMEI() const {
     return thisModem().getIMEIImpl();
   }
   // Asks for International Mobile Subscriber Identity IMSI
-  String getIMSI() {
+  String getIMSI() const {
     return thisModem().getIMSIImpl();
   }
-  SimStatus getSimStatus(uint32_t timeout_ms = 10000L) {
+  SimStatus getSimStatus(uint32_t timeout_ms = 10000L) const {
     return thisModem().getSimStatusImpl(timeout_ms);
   }
 
@@ -50,18 +50,18 @@ class TinyGsmGPRS {
    * GPRS functions
    */
   bool gprsConnect(const char* apn, const char* user = NULL,
-                   const char* pwd = NULL) {
+                   const char* pwd = NULL) const {
     return thisModem().gprsConnectImpl(apn, user, pwd);
   }
-  bool gprsDisconnect() {
+  bool gprsDisconnect() const {
     return thisModem().gprsDisconnectImpl();
   }
   // Checks if current attached to GPRS/EPS service
-  bool isGprsConnected() {
+  bool isGprsConnected() const {
     return thisModem().isGprsConnectedImpl();
   }
   // Gets the current network operator
-  String getOperator() {
+  String getOperator() const {
     return thisModem().getOperatorImpl();
   }
 
@@ -81,7 +81,7 @@ class TinyGsmGPRS {
    */
  protected:
   // Unlocks a sim via the 3GPP TS command AT+CPIN
-  bool simUnlockImpl(const char* pin) {
+  bool simUnlockImpl(const char* pin) const {
     if (pin && strlen(pin) > 0) {
       thisModem().sendAT(GF("+CPIN=\""), pin, GF("\""));
       return thisModem().waitResponse() == 1;
@@ -90,7 +90,7 @@ class TinyGsmGPRS {
   }
 
   // Gets the CCID of a sim card via AT+CCID
-  String getSimCCIDImpl() {
+  String getSimCCIDImpl() const {
     thisModem().sendAT(GF("+CCID"));
     if (thisModem().waitResponse(GF("+CCID:")) != 1) { return ""; }
     String res = thisModem().stream.readStringUntil('\n');
@@ -101,7 +101,7 @@ class TinyGsmGPRS {
 
   // Asks for TA Serial Number Identification (IMEI) via the V.25TER standard
   // AT+GSN command
-  String getIMEIImpl() {
+  String getIMEIImpl() const {
     thisModem().sendAT(GF("+GSN"));
     thisModem().streamSkipUntil('\n');  // skip first newline
     String res = thisModem().stream.readStringUntil('\n');
@@ -112,7 +112,7 @@ class TinyGsmGPRS {
 
   // Asks for International Mobile Subscriber Identity IMSI via the AT+CIMI
   // command
-  String getIMSIImpl() {
+  String getIMSIImpl() const {
     thisModem().sendAT(GF("+CIMI"));
     thisModem().streamSkipUntil('\n');  // skip first newline
     String res = thisModem().stream.readStringUntil('\n');
@@ -121,7 +121,7 @@ class TinyGsmGPRS {
     return res;
   }
 
-  SimStatus getSimStatusImpl(uint32_t timeout_ms = 10000L) {
+  SimStatus getSimStatusImpl(uint32_t timeout_ms = 10000L) const {
     for (uint32_t start = millis(); millis() - start < timeout_ms;) {
       thisModem().sendAT(GF("+CPIN?"));
       if (thisModem().waitResponse(GF("+CPIN:")) != 1) {
@@ -147,7 +147,7 @@ class TinyGsmGPRS {
    */
  protected:
   // Checks if current attached to GPRS/EPS service
-  bool isGprsConnectedImpl() {
+  bool isGprsConnectedImpl() const {
     thisModem().sendAT(GF("+CGATT?"));
     if (thisModem().waitResponse(GF("+CGATT:")) != 1) { return false; }
     int8_t res = thisModem().streamGetIntBefore('\n');
@@ -158,7 +158,7 @@ class TinyGsmGPRS {
   }
 
   // Gets the current network operator via the 3GPP TS command AT+COPS
-  String getOperatorImpl() {
+  String getOperatorImpl() const {
     thisModem().sendAT(GF("+COPS?"));
     if (thisModem().waitResponse(GF("+COPS:")) != 1) { return ""; }
     thisModem().streamSkipUntil('"'); /* Skip mode and format */

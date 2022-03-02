@@ -12,9 +12,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/vshymanskyy/TinyGSM.git"
+    "url": "https://github.com/SherifMEldeeb/TinyGSM.git"
   },
-  "homepage": "https://github.com/vshymanskyy/TinyGSM",
+  "homepage": "https://github.com/SherifMEldeeb/TinyGSM",
   "export": {
     "include": [
       "LICENSE",

@@ -98,7 +98,7 @@ class TinyGsmModem {
   inline const modemType& thisModem() const {
     return static_cast<const modemType&>(*this);
   }
-  inline modemType& thisModem() const {
+  inline modemType& thisModem() {
     return static_cast<modemType&>(*this);
   }
 

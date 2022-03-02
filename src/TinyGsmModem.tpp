@@ -252,17 +252,17 @@ class TinyGsmModem {
  public:
   // Utility templates for writing/skipping characters on a stream
   template <typename T>
-  inline void streamWrite(T last) {
+  inline void streamWrite(T last) const {
     thisModem().stream.print(last);
   }
 
   template <typename T, typename... Args>
-  inline void streamWrite(T head, Args... tail) {
+  inline void streamWrite(T head, Args... tail) const {
     thisModem().stream.print(head);
     thisModem().streamWrite(tail...);
   }
 
-  inline void streamClear() {
+  inline void streamClear() const {
     while (thisModem().stream.available()) {
       thisModem().waitResponse(50, NULL, NULL);
     }

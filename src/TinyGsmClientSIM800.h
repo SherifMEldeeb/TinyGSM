@@ -75,7 +75,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    public:
     GsmClientSim800() {}
 
-    explicit GsmClientSim800(TinyGsmSim800& modem, uint8_t mux = 0) const {
+    explicit GsmClientSim800(TinyGsmSim800& modem, uint8_t mux = 0) {
       init(&modem, mux);
     }
 

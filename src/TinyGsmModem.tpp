@@ -17,55 +17,55 @@ class TinyGsmModem {
   /*
    * Basic functions
    */
-  bool begin(const char* pin = NULL) {
+  bool begin(const char* pin = NULL) const {
     return thisModem().initImpl(pin);
   }
-  bool init(const char* pin = NULL) {
+  bool init(const char* pin = NULL) const {
     return thisModem().initImpl(pin);
   }
   template <typename... Args>
-  inline void sendAT(Args... cmd) {
+  inline void sendAT(Args... cmd) const {
     thisModem().streamWrite("AT", cmd..., thisModem().gsmNL);
     thisModem().stream.flush();
     TINY_GSM_YIELD(); /* DBG("### AT:", cmd...); */
   }
-  void setBaud(uint32_t baud) {
+  void setBaud(uint32_t baud) const {
     thisModem().setBaudImpl(baud);
   }
   // Test response to AT commands
-  bool testAT(uint32_t timeout_ms = 10000L) {
+  bool testAT(uint32_t timeout_ms = 10000L) const {
     return thisModem().testATImpl(timeout_ms);
   }
 
   // Asks for modem information via the V.25TER standard ATI command
   // NOTE:  The actual value and style of the response is quite varied
-  String getModemInfo() {
+  String getModemInfo() const {
     return thisModem().getModemInfoImpl();
   }
   // Gets the modem name (as it calls itself)
-  String getModemName() {
+  String getModemName() const {
     return thisModem().getModemNameImpl();
   }
-  bool factoryDefault() {
+  bool factoryDefault() const {
     return thisModem().factoryDefaultImpl();
   }
 
   /*
    * Power functions
    */
-  bool restart(const char* pin = NULL) {
+  bool restart(const char* pin = NULL) const {
     return thisModem().restartImpl(pin);
   }
-  bool poweroff() {
+  bool poweroff() const {
     return thisModem().powerOffImpl();
   }
-  bool radioOff() {
+  bool radioOff() const {
     return thisModem().radioOffImpl();
   }
-  bool sleepEnable(bool enable = true) {
+  bool sleepEnable(bool enable = true) const {
     return thisModem().sleepEnableImpl(enable);
   }
-  bool setPhoneFunctionality(uint8_t fun, bool reset = false) {
+  bool setPhoneFunctionality(uint8_t fun, bool reset = false) const {
     return thisModem().setPhoneFunctionalityImpl(fun, reset);
   }
 
@@ -73,21 +73,21 @@ class TinyGsmModem {
    * Generic network functions
    */
   // RegStatus getRegistrationStatus() {}
-  bool isNetworkConnected() {
+  bool isNetworkConnected() const {
     return thisModem().isNetworkConnectedImpl();
   }
   // Waits for network attachment
-  bool waitForNetwork(uint32_t timeout_ms = 60000L, bool check_signal = false) {
+  bool waitForNetwork(uint32_t timeout_ms = 60000L, bool check_signal = false) const {
     return thisModem().waitForNetworkImpl(timeout_ms, check_signal);
   }
   // Gets signal quality report
-  int16_t getSignalQuality() {
+  int16_t getSignalQuality() const {
     return thisModem().getSignalQualityImpl();
   }
-  String getLocalIP() {
+  String getLocalIP() const {
     return thisModem().getLocalIPImpl();
   }
-  IPAddress localIP() {
+  IPAddress localIP() const {
     return thisModem().TinyGsmIpFromString(thisModem().getLocalIP());
   }
 
@@ -98,7 +98,7 @@ class TinyGsmModem {
   inline const modemType& thisModem() const {
     return static_cast<const modemType&>(*this);
   }
-  inline modemType& thisModem() {
+  inline modemType& thisModem() const {
     return static_cast<modemType&>(*this);
   }
 
@@ -106,12 +106,12 @@ class TinyGsmModem {
    * Basic functions
    */
  protected:
-  void setBaudImpl(uint32_t baud) {
+  void setBaudImpl(uint32_t baud) const {
     thisModem().sendAT(GF("+IPR="), baud);
     thisModem().waitResponse();
   }
 
-  bool testATImpl(uint32_t timeout_ms = 10000L) {
+  bool testATImpl(uint32_t timeout_ms = 10000L) const {
     for (uint32_t start = millis(); millis() - start < timeout_ms;) {
       thisModem().sendAT(GF(""));
       if (thisModem().waitResponse(200) == 1) { return true; }
@@ -120,7 +120,7 @@ class TinyGsmModem {
     return false;
   }
 
-  String getModemInfoImpl() {
+  String getModemInfoImpl() const {
     thisModem().sendAT(GF("I"));
     String res;
     if (thisModem().waitResponse(1000L, res) != 1) { return ""; }
@@ -133,7 +133,7 @@ class TinyGsmModem {
     return res;
   }
 
-  String getModemNameImpl() {
+  String getModemNameImpl() const {
     thisModem().sendAT(GF("+CGMI"));
     String res1;
     if (thisModem().waitResponse(1000L, res1) != 1) { return "unknown"; }
@@ -153,7 +153,7 @@ class TinyGsmModem {
     return name;
   }
 
-  bool factoryDefaultImpl() {
+  bool factoryDefaultImpl() const {
     thisModem().sendAT(GF("&FZE0&W"));  // Factory + Reset + Echo Off + Write
     thisModem().waitResponse();
     thisModem().sendAT(GF("+IPR=0"));  // Auto-baud
@@ -166,7 +166,7 @@ class TinyGsmModem {
    * Power functions
    */
  protected:
-  bool radioOffImpl() {
+  bool radioOffImpl() const {
     if (!thisModem().setPhoneFunctionality(0)) { return false; }
     delay(3000);
     return true;
@@ -185,7 +185,7 @@ class TinyGsmModem {
   // CREG = Generic network registration
   // CGREG = GPRS service registration
   // CEREG = EPS registration for LTE modules
-  int8_t getRegistrationStatusXREG(const char* regCommand) {
+  int8_t getRegistrationStatusXREG(const char* regCommand) const {
     thisModem().sendAT('+', regCommand, '?');
     // check for any of the three for simplicity
     int8_t resp = thisModem().waitResponse(GF("+CREG:"), GF("+CGREG:"),
@@ -198,7 +198,7 @@ class TinyGsmModem {
   }
 
   bool waitForNetworkImpl(uint32_t timeout_ms   = 60000L,
-                          bool     check_signal = false) {
+                          bool     check_signal = false) const {
     for (uint32_t start = millis(); millis() - start < timeout_ms;) {
       if (check_signal) { thisModem().getSignalQuality(); }
       if (thisModem().isNetworkConnected()) { return true; }
@@ -208,7 +208,7 @@ class TinyGsmModem {
   }
 
   // Gets signal quality report according to 3GPP TS command AT+CSQ
-  int8_t getSignalQualityImpl() {
+  int8_t getSignalQualityImpl() const {
     thisModem().sendAT(GF("+CSQ"));
     if (thisModem().waitResponse(GF("+CSQ:")) != 1) { return 99; }
     int8_t res = thisModem().streamGetIntBefore(',');
@@ -216,7 +216,7 @@ class TinyGsmModem {
     return res;
   }
 
-  String getLocalIPImpl() {
+  String getLocalIPImpl() const {
     thisModem().sendAT(GF("+CGPADDR=1"));
     if (thisModem().waitResponse(GF("+CGPADDR:")) != 1) { return ""; }
     thisModem().streamSkipUntil(',');  // Skip context id

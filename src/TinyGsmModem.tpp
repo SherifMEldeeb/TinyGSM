@@ -270,7 +270,7 @@ class TinyGsmModem {
 
  protected:
   inline bool streamGetLength(char* buf, int8_t numChars,
-                              const uint32_t timeout_ms = 1000L) {
+                              const uint32_t timeout_ms = 1000L) const {
     if (!buf) { return false; }
 
     int8_t   numCharsReady = -1;
@@ -289,7 +289,7 @@ class TinyGsmModem {
   }
 
   inline int16_t streamGetIntLength(int8_t         numChars,
-                                    const uint32_t timeout_ms = 1000L) {
+                                    const uint32_t timeout_ms = 1000L) const {
     char buf[numChars + 1];
     if (streamGetLength(buf, numChars, timeout_ms)) {
       buf[numChars] = '\0';
@@ -299,7 +299,7 @@ class TinyGsmModem {
     return -9999;
   }
 
-  inline int16_t streamGetIntBefore(char lastChar) {
+  inline int16_t streamGetIntBefore(char lastChar) const {
     char   buf[7];
     size_t bytesRead = thisModem().stream.readBytesUntil(
         lastChar, buf, static_cast<size_t>(7));
@@ -314,7 +314,7 @@ class TinyGsmModem {
   }
 
   inline float streamGetFloatLength(int8_t         numChars,
-                                    const uint32_t timeout_ms = 1000L) {
+                                    const uint32_t timeout_ms = 1000L) const {
     char buf[numChars + 1];
     if (streamGetLength(buf, numChars, timeout_ms)) {
       buf[numChars] = '\0';
@@ -324,7 +324,7 @@ class TinyGsmModem {
     return -9999.0F;
   }
 
-  inline float streamGetFloatBefore(char lastChar) {
+  inline float streamGetFloatBefore(char lastChar) const {
     char   buf[16];
     size_t bytesRead = thisModem().stream.readBytesUntil(
         lastChar, buf, static_cast<size_t>(16));
@@ -338,7 +338,7 @@ class TinyGsmModem {
     return -9999.0F;
   }
 
-  inline bool streamSkipUntil(const char c, const uint32_t timeout_ms = 1000L) {
+  inline bool streamSkipUntil(const char c, const uint32_t timeout_ms = 1000L) const {
     uint32_t startMillis = millis();
     while (millis() - startMillis < timeout_ms) {
       while (millis() - startMillis < timeout_ms &&

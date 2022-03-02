@@ -75,11 +75,11 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    public:
     GsmClientSim800() {}
 
-    explicit GsmClientSim800(TinyGsmSim800& modem, uint8_t mux = 0) {
+    explicit GsmClientSim800(TinyGsmSim800& modem, uint8_t mux = 0) const {
       init(&modem, mux);
     }
 
-    bool init(TinyGsmSim800* modem, uint8_t mux = 0) {
+    bool init(TinyGsmSim800* modem, uint8_t mux = 0) const {
       this->at       = modem;
       sock_available = 0;
       prev_check     = 0;
@@ -97,7 +97,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     }
 
    public:
-    virtual int connect(const char* host, uint16_t port, int timeout_s) {
+    virtual int connect(const char* host, uint16_t port, int timeout_s) const {
       stop();
       TINY_GSM_YIELD();
       rx.clear();
@@ -106,7 +106,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     }
     TINY_GSM_CLIENT_CONNECT_OVERRIDES
 
-    void stop(uint32_t maxWaitMs) {
+    void stop(uint32_t maxWaitMs) const {
       dumpModemBuffer(maxWaitMs);
       at->sendAT(GF("+CIPCLOSE="), mux, GF(",1"));  // Quick close
       sock_connected = false;
@@ -157,7 +157,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Basic functions
    */
  protected:
-  bool initImpl(const char* pin = NULL) {
+  bool initImpl(const char* pin = NULL) const {
     DBG(GF("### TinyGSM Version:"), TINYGSM_VERSION);
     DBG(GF("### TinyGSM Compiled Module:  TinyGsmClientSIM800"));
 
@@ -198,7 +198,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     }
   }
 
-  String getModemNameImpl() {
+  String getModemNameImpl() const {
     String name = "";
 #if defined(TINY_GSM_MODEM_SIM800)
     name = "SIMCom SIM800";
@@ -222,7 +222,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return name;
   }
 
-  bool factoryDefaultImpl() {
+  bool factoryDefaultImpl() const {
     sendAT(GF("&FZE0&W"));  // Factory + Reset + Echo Off + Write
     waitResponse();
     sendAT(GF("+IPR=0"));  // Auto-baud
@@ -253,7 +253,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Power functions
    */
  protected:
-  bool restartImpl(const char* pin = NULL) {
+  bool restartImpl(const char* pin = NULL) const {
     if (!testAT()) { return false; }
     sendAT(GF("&W"));
     waitResponse();
@@ -263,7 +263,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return init(pin);
   }
 
-  bool powerOffImpl() {
+  bool powerOffImpl() const {
     sendAT(GF("+CPOWD=1"));
     return waitResponse(10000L, GF("NORMAL POWER DOWN")) == 1;
   }
@@ -272,7 +272,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
   // order to reestablish communication pull the DRT-pin of the SIM800 module
   // LOW for at least 50ms. Then use this function to disable sleep mode. The
   // DTR-pin can then be released again.
-  bool sleepEnableImpl(bool enable = true) {
+  bool sleepEnableImpl(bool enable = true) const {
     sendAT(GF("+CSCLK="), enable);
     return waitResponse() == 1;
   }
@@ -281,7 +281,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
   // <fun> 1 Full functionality (Default)
   // <fun> 4 Disable phone both transmit and receive RF circuits.
   // <rst> Reset the MT before setting it to <fun> power level.
-  bool setPhoneFunctionalityImpl(uint8_t fun, bool reset = false) {
+  bool setPhoneFunctionalityImpl(uint8_t fun, bool reset = false) const {
     sendAT(GF("+CFUN="), fun, reset ? ",1" : "");
     return waitResponse(10000L) == 1;
   }
@@ -290,17 +290,17 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Generic network functions
    */
  public:
-  RegStatus getRegistrationStatus() {
+  RegStatus getRegistrationStatus() const {
     return (RegStatus)getRegistrationStatusXREG("CREG");
   }
 
  protected:
-  bool isNetworkConnectedImpl() {
+  bool isNetworkConnectedImpl() const {
     RegStatus s = getRegistrationStatus();
     return (s == REG_OK_HOME || s == REG_OK_ROAMING);
   }
 
-  String getLocalIPImpl() {
+  String getLocalIPImpl() const {
     sendAT(GF("+CIFSR;E0"));
     String res;
     if (waitResponse(10000L, res) != 1) { return ""; }
@@ -315,7 +315,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    */
  protected:
   bool gprsConnectImpl(const char* apn, const char* user = NULL,
-                       const char* pwd = NULL) {
+                       const char* pwd = NULL) const {
     gprsDisconnect();
 
     // Bearer settings for applications based on IP
@@ -388,7 +388,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return true;
   }
 
-  bool gprsDisconnectImpl() {
+  bool gprsDisconnectImpl() const {
     // Shut the TCP/IP connection
     // CIPSHUT will close *all* open connections
     sendAT(GF("+CIPSHUT"));
@@ -405,7 +405,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    */
  protected:
   // May not return the "+CCID" before the number
-  String getSimCCIDImpl() {
+  String getSimCCIDImpl() const {
     sendAT(GF("+CCID"));
     if (waitResponse(GF(GSM_NL)) != 1) { return ""; }
     String res = stream.readStringUntil('\n');
@@ -420,7 +420,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Phone Call functions
    */
  public:
-  bool setGsmBusy(bool busy = true) {
+  bool setGsmBusy(bool busy = true) const {
     sendAT(GF("+GSMBUSY="), busy ? 1 : 0);
     return waitResponse() == 1;
   }
@@ -449,13 +449,13 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Audio functions
    */
  public:
-  bool setVolume(uint8_t volume = 50) {
+  bool setVolume(uint8_t volume = 50) const {
     // Set speaker volume
     sendAT(GF("+CLVL="), volume);
     return waitResponse() == 1;
   }
 
-  uint8_t getVolume() {
+  uint8_t getVolume() const {
     // Get speaker volume
     sendAT(GF("+CLVL?"));
     if (waitResponse(GF(GSM_NL)) != 1) { return 0; }
@@ -466,18 +466,18 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return res.toInt();
   }
 
-  bool setMicVolume(uint8_t channel, uint8_t level) {
+  bool setMicVolume(uint8_t channel, uint8_t level) const {
     if (channel > 4) { return 0; }
     sendAT(GF("+CMIC="), level);
     return waitResponse() == 1;
   }
 
-  bool setAudioChannel(uint8_t channel) {
+  bool setAudioChannel(uint8_t channel) const {
     sendAT(GF("+CHFA="), channel);
     return waitResponse() == 1;
   }
 
-  bool playToolkitTone(uint8_t tone, uint32_t duration) {
+  bool playToolkitTone(uint8_t tone, uint32_t duration) const {
     sendAT(GF("STTONE="), 1, tone);
     delay(duration);
     sendAT(GF("STTONE="), 0);
@@ -511,7 +511,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    */
  protected:
   bool modemConnect(const char* host, uint16_t port, uint8_t mux,
-                    bool ssl = false, int timeout_s = 75) {
+                    bool ssl = false, int timeout_s = 75) const {
     int8_t   rsp;
     uint32_t timeout_ms = ((uint32_t)timeout_s) * 1000;
 #if !defined(TINY_GSM_MODEM_SIM900)
@@ -540,7 +540,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return (1 == rsp);
   }
 
-  int16_t modemSend(const void* buff, size_t len, uint8_t mux) {
+  int16_t modemSend(const void* buff, size_t len, uint8_t mux) const {
     sendAT(GF("+CIPSEND="), mux, ',', (uint16_t)len);
     if (waitResponse(GF(">")) != 1) { return 0; }
     stream.write(reinterpret_cast<const uint8_t*>(buff), len);
@@ -550,7 +550,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return streamGetIntBefore('\n');
   }
 
-  size_t modemRead(size_t size, uint8_t mux) {
+  size_t modemRead(size_t size, uint8_t mux) const {
     if (!sockets[mux]) return 0;
 #ifdef TINY_GSM_USE_HEX
     sendAT(GF("+CIPRXGET=3,"), mux, ',', (uint16_t)size);
@@ -598,7 +598,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return len_requested;
   }
 
-  size_t modemGetAvailable(uint8_t mux) {
+  size_t modemGetAvailable(uint8_t mux) const {
     if (!sockets[mux]) return 0;
     sendAT(GF("+CIPRXGET=4,"), mux);
     size_t result = 0;
@@ -613,7 +613,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return result;
   }
 
-  bool modemGetConnected(uint8_t mux) {
+  bool modemGetConnected(uint8_t mux) const {
     sendAT(GF("+CIPSTATUS="), mux);
     waitResponse(GF("+CIPSTATUS"));
     int8_t res = waitResponse(GF(",\"CONNECTED\""), GF(",\"CLOSED\""),
@@ -637,7 +637,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
 #else
                       GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
 #endif
-                      GsmConstStr r5 = NULL) {
+                      GsmConstStr r5 = NULL) const {
     /*String r1s(r1); r1s.trim();
     String r2s(r2); r2s.trim();
     String r3s(r3); r3s.trim();
@@ -743,7 +743,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
 #else
                       GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
 #endif
-                      GsmConstStr r5 = NULL) {
+                      GsmConstStr r5 = NULL) const {
     String data;
     return waitResponse(timeout_ms, data, r1, r2, r3, r4, r5);
   }
@@ -756,7 +756,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
 #else
                       GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
 #endif
-                      GsmConstStr r5 = NULL) {
+                      GsmConstStr r5 = NULL) const {
     return waitResponse(1000, r1, r2, r3, r4, r5);
   }
 

@@ -26,6 +26,7 @@
 #include "TinyGsmTCP.tpp"
 #include "TinyGsmTime.tpp"
 #include "TinyGsmNTP.tpp"
+#include <regex>
 
 #define GSM_NL "\r\n"
 static const char GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
@@ -44,6 +45,7 @@ enum RegStatus {
   REG_OK_ROAMING   = 5,
   REG_UNKNOWN      = 4,
 };
+
 class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
                       public TinyGsmGPRS<TinyGsmSim800>,
                       public TinyGsmTCP<TinyGsmSim800, TINY_GSM_MUX_COUNT>,
@@ -253,6 +255,34 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    * Power functions
    */
  protected:
+    bool TinyGsmEndsWith(const char* s, const char* e) const {  // source & ending
+        if (!s || !e) return false;
+        const size_t sz = strlen(s), ez = strlen(e);
+        return sz >= ez && (strcmp((s + sz) - ez, e) == 0);
+    }
+
+//    std::string _ltrim(const std::string &s) const {
+//        return std::regex_replace(s, std::regex("^\\s+"), "");
+//    }
+//
+//    std::string _rtrim(const std::string &s) const {
+//        return std::regex_replace(s, std::regex("\\s+$"), "");
+//    }
+
+    std::string TinyGsmTrim(const std::string &s) const {
+        auto start = s.begin();
+        while (start != s.end() && std::isspace(*start)) {
+            start++;
+        }
+
+        auto end = s.end();
+        do {
+            end--;
+        } while (std::distance(start, end) > 0 && std::isspace(*end));
+
+        return std::string(start, end + 1);
+    }
+
   bool restartImpl(const char* pin = NULL) const {
     if (!testAT()) { return false; }
     sendAT(GF("&W"));
@@ -405,14 +435,15 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
    */
  protected:
   // May not return the "+CCID" before the number
-  String getSimCCIDImpl() const {
+  std::string getSimCCIDImpl() const {
     sendAT(GF("+CCID"));
     if (waitResponse(GF(GSM_NL)) != 1) { return ""; }
-    String res = stream.readStringUntil('\n');
+    std::string res = stream.readStringUntil('\n').c_str();
     waitResponse();
     // Trim out the CCID header in case it is there
-    res.replace("CCID:", "");
-    res.trim();
+    res.erase(res.find_last_of("\r\n"));
+      res = std::regex_replace(res, std::regex("CCID:"), "");
+      TinyGsmTrim(res);
     return res;
   }
 
@@ -644,7 +675,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     String r4s(r4); r4s.trim();
     String r5s(r5); r5s.trim();
     DBG("### ..:", r1s, ",", r2s, ",", r3s, ",", r4s, ",", r5s);*/
-    data.reserve(64);
+    data.reserve(96);
     uint8_t  index       = 0;
     uint32_t startMillis = millis();
     do {
@@ -735,6 +766,113 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
     return index;
   }
 
+  int8_t waitResponse(uint32_t timeout_ms, std::string & data,
+                      GsmConstStr r1 = GFP(GSM_OK),
+                      GsmConstStr r2 = GFP(GSM_ERROR),
+#if defined TINY_GSM_DEBUG
+                      GsmConstStr r3 = GFP(GSM_CME_ERROR),
+                      GsmConstStr r4 = GFP(GSM_CMS_ERROR),
+#else
+                      GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
+#endif
+                      GsmConstStr r5 = NULL) const {
+    /*String r1s(r1); r1s.trim();
+    String r2s(r2); r2s.trim();
+    String r3s(r3); r3s.trim();
+    String r4s(r4); r4s.trim();
+    String r5s(r5); r5s.trim();
+    DBG("### ..:", r1s, ",", r2s, ",", r3s, ",", r4s, ",", r5s);*/
+    data.reserve(121);
+    uint8_t  index       = 0;
+    uint32_t startMillis = millis();
+    do {
+      TINY_GSM_YIELD();
+      while (stream.available() > 0) {
+        TINY_GSM_YIELD();
+        int8_t a = stream.read();
+        if (a <= 0) continue;  // Skip 0x00 bytes, just in case
+        data += static_cast<char>(a);
+        if (TinyGsmEndsWith(data.c_str(),r1)) {
+          index = 1;
+          goto finish;
+        } else if (TinyGsmEndsWith(data.c_str(),r2)) {
+          index = 2;
+          goto finish;
+        } else if (TinyGsmEndsWith(data.c_str(),r3)) {
+#if defined TINY_GSM_DEBUG
+          if (r3 == GFP(GSM_CME_ERROR)) {
+            streamSkipUntil('\n');  // Read out the error
+          }
+#endif
+          index = 3;
+          goto finish;
+        } else if (TinyGsmEndsWith(data.c_str(),r4)) {
+          index = 4;
+          goto finish;
+        } else if (TinyGsmEndsWith(data.c_str(),r5)) {
+          index = 5;
+          goto finish;
+        } else if (TinyGsmEndsWith(data.c_str(),GF(GSM_NL "+CIPRXGET:"))) {
+          int8_t mode = streamGetIntBefore(',');
+          if (mode == 1) {
+            int8_t mux = streamGetIntBefore('\n');
+            if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && sockets[mux]) {
+              sockets[mux]->got_data = true;
+            }
+            data = "";
+            // DBG("### Got Data:", mux);
+          } else {
+            data += mode;
+          }
+        } else if (TinyGsmEndsWith(data.c_str(),GF(GSM_NL "+RECEIVE:"))) {
+          int8_t  mux = streamGetIntBefore(',');
+          int16_t len = streamGetIntBefore('\n');
+          if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && sockets[mux]) {
+            sockets[mux]->got_data = true;
+            if (len >= 0 && len <= 1024) { sockets[mux]->sock_available = len; }
+          }
+          data = "";
+          // DBG("### Got Data:", len, "on", mux);
+        } else if (TinyGsmEndsWith(data.c_str(),GF("CLOSED" GSM_NL))) {
+          int8_t nl   = data.find_last_of(GSM_NL, data.length() - 8);
+          int8_t coma = data.find(',', nl + 2);
+          long mux  = strtol(data.substr(nl + 2, coma).c_str(), nullptr,10);
+          if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && sockets[mux]) {
+            sockets[mux]->sock_connected = false;
+          }
+          data = "";
+          DBG("### Closed: ", mux);
+        } else if (TinyGsmEndsWith(data.c_str(),GF("*PSNWID:"))) {
+          streamSkipUntil('\n');  // Refresh network name by network
+          data = "";
+          DBG("### Network name updated.");
+        } else if (TinyGsmEndsWith(data.c_str(),GF("*PSUTTZ:"))) {
+          streamSkipUntil('\n');  // Refresh time and time zone by network
+          data = "";
+          DBG("### Network time and time zone updated.");
+        } else if (TinyGsmEndsWith(data.c_str(),GF("+CTZV:"))) {
+          streamSkipUntil('\n');  // Refresh network time zone by network
+          data = "";
+          DBG("### Network time zone updated.");
+        } else if (TinyGsmEndsWith(data.c_str(),GF("DST:"))) {
+          streamSkipUntil(
+              '\n');  // Refresh Network Daylight Saving Time by network
+          data = "";
+          DBG("### Daylight savings time state updated.");
+        }
+      }
+    } while (millis() - startMillis < timeout_ms);
+  finish:
+    if (!index) {
+      TinyGsmTrim(data);
+      if (data.length()) { DBG("### Unhandled:", data.c_str()); }
+      data.clear();
+    }
+    // data.replace(GSM_NL, "/");
+    // DBG('<', index, '>', data);
+    return index;
+  }
+
   int8_t waitResponse(uint32_t timeout_ms, GsmConstStr r1 = GFP(GSM_OK),
                       GsmConstStr r2 = GFP(GSM_ERROR),
 #if defined TINY_GSM_DEBUG
@@ -744,7 +882,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
                       GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
 #endif
                       GsmConstStr r5 = NULL) const {
-    String data;
+      std::string data{};
     return waitResponse(timeout_ms, data, r1, r2, r3, r4, r5);
   }
 
@@ -757,7 +895,7 @@ class TinyGsmSim800 : public TinyGsmModem<TinyGsmSim800>,
                       GsmConstStr r3 = NULL, GsmConstStr r4 = NULL,
 #endif
                       GsmConstStr r5 = NULL) const {
-    return waitResponse(1000, r1, r2, r3, r4, r5);
+    return waitResponse(2000, r1, r2, r3, r4, r5);
   }
 
  public:

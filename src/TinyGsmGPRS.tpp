@@ -31,7 +31,7 @@ class TinyGsmGPRS {
     return thisModem().simUnlockImpl(pin);
   }
   // Gets the CCID of a sim card via AT+CCID
-  String getSimCCID() const {
+  std::string getSimCCID() const {
     return thisModem().getSimCCIDImpl();
   }
   // Asks for TA Serial Number Identification (IMEI)
@@ -90,12 +90,12 @@ class TinyGsmGPRS {
   }
 
   // Gets the CCID of a sim card via AT+CCID
-  String getSimCCIDImpl() const {
+  std::string getSimCCIDImpl() const {
     thisModem().sendAT(GF("+CCID"));
     if (thisModem().waitResponse(GF("+CCID:")) != 1) { return ""; }
-    String res = thisModem().stream.readStringUntil('\n');
+    std::string res = thisModem().stream.readStringUntil('\n').c_str();
     thisModem().waitResponse();
-    res.trim();
+//    res.trim();
     return res;
   }
 

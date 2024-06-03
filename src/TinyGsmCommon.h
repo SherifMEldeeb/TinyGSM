@@ -16,7 +16,10 @@
 #include "Particle.h"
 #elif defined(ARDUINO)
 #if ARDUINO >= 100
+
 #include "Arduino.h"
+extern bool         loopTaskWDTEnabled;
+
 #else
 #include "WProgram.h"
 #endif
@@ -25,7 +28,9 @@
 #if defined(ARDUINO_DASH)
 #include <ArduinoCompat/Client.h>
 #else
+
 #include <Client.h>
+
 #endif
 
 #ifndef TINY_GSM_YIELD_MS
@@ -33,8 +38,10 @@
 #endif
 
 #ifndef TINY_GSM_YIELD
-#define TINY_GSM_YIELD() \
-  { delay(TINY_GSM_YIELD_MS); }
+#define TINY_GSM_YIELD()                   \
+  {                                        \
+    if (loopTaskWDTEnabled) feedLoopWDT(); \
+  }
 #endif
 
 #define TINY_GSM_ATTR_NOT_AVAILABLE \
